@@ -10,6 +10,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from cryptography.x509 import SubjectAlternativeName
+from cryptography.x509 import load_pem_x509_certificate
 
 def select_file(text_widget):
     file_path = filedialog.askopenfilename(title="Select File")
@@ -531,6 +532,61 @@ def create_crt_generator(sub_tab_control):
 
     return crt_generator_tab
 
+def convert_cert(format_var):
+    file_path = filedialog.askopenfilename(title="Select Certificate File")
+    if file_path:
+        save_dir = filedialog.askdirectory()
+        if save_dir:
+            try:
+                with open(file_path, 'rb') as cert_file:
+                    cert_content = cert_file.read()
+                    cert = load_pem_x509_certificate(cert_content)
+
+                    # Convert certificate to different formats
+                    if format_var.get() == "PEM":
+                        converted_cert = cert.public_bytes(serialization.Encoding.PEM)
+                    elif format_var.get() == "DER":
+                        converted_cert = cert.public_bytes(serialization.Encoding.DER)
+                    elif format_var.get() == "P7B":
+                        converted_cert = cert.public_bytes(serialization.Encoding.PKCS7)
+                    elif format_var.get() == "PFX":
+                        converted_cert = cert.public_bytes(serialization.Encoding.PKCS12)
+                    else:
+                        label_cert_convert_status.config(text="Please select a format!")
+                        return
+
+                    with open(f"{save_dir}/converted_certificate.{format_var.get().lower()}", "wb") as f:
+                        f.write(converted_cert)
+                    label_cert_convert_status.config(text="Certificate converted successfully!")
+            except Exception as e:
+                label_cert_convert_status.config(text=f"Error converting certificate: {e}")
+
+def create_cert_converter(sub_tab_control):
+    cert_converter_tab = ttk.Frame(sub_tab_control)
+    sub_tab_control.add(cert_converter_tab, text="Cert Converter")
+
+    label_select_cert = tk.Label(cert_converter_tab, text="Select Certificate File:")
+    label_select_cert.pack()
+
+    button_select_cert = tk.Button(cert_converter_tab, text="Select Certificate File", command=lambda: convert_cert(format_var))
+    button_select_cert.pack()
+
+    global label_cert_convert_status
+    label_cert_convert_status = tk.Label(cert_converter_tab, text="")
+    label_cert_convert_status.pack()
+
+    # Dropdown or Radio buttons for format selection
+    format_var = tk.StringVar()
+    format_var.set("PEM")  # Default format
+
+    label_format = tk.Label(cert_converter_tab, text="Select Format to Convert:")
+    label_format.pack()
+
+    format_dropdown = tk.OptionMenu(cert_converter_tab, format_var, "PEM", "DER", "P7B", "PFX")
+    format_dropdown.pack()
+
+    return cert_converter_tab
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -553,6 +609,10 @@ def main():
     cert_key_matcher_tab = create_cert_key_matcher(sub_tab_control)
 
     crt_generator_tab = create_crt_generator(sub_tab_control)
+
+    # New Cert Converter Tab
+    cert_converter_tab = create_cert_converter(sub_tab_control)
+
     window.mainloop()
 
 if __name__ == "__main__":
