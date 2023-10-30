@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import tkinter as tk
+import datetime
+import uuid
 from tkinter import filedialog
 from tkinter import ttk
 from cryptography.hazmat.primitives import serialization
@@ -443,6 +445,92 @@ def create_cert_key_matcher(sub_tab_control):
 
     return cert_key_matcher_tab
 
+def select_csr_file():
+    file_path = filedialog.askopenfilename(title="Select CSR File")
+    if file_path:
+        with open(file_path, 'rb') as file:
+            content = file.read()
+            entry_paste_csr.delete(1.0, tk.END)
+            entry_paste_csr.insert(tk.END, content)
+
+def select_key_file():
+    file_path = filedialog.askopenfilename(title="Select Private Key File")
+    if file_path:
+        with open(file_path, 'rb') as file:
+            content = file.read()
+            entry_paste_key.delete(1.0, tk.END)
+            entry_paste_key.insert(tk.END, content)
+
+def generate_crt():
+    csr_content = entry_paste_csr.get("1.0", tk.END).encode('utf-8')
+    key_content = entry_paste_key.get("1.0", tk.END).encode('utf-8')
+    validity_days = entry_validity_days.get()
+
+    if csr_content and key_content and validity_days:
+        try:
+            csr = x509.load_pem_x509_csr(csr_content)
+            key = serialization.load_pem_private_key(key_content, password=None)
+
+            builder = x509.CertificateBuilder()
+            builder = builder.subject_name(csr.subject)
+            builder = builder.issuer_name(csr.subject)  # Self-signed certificate
+            builder = builder.public_key(csr.public_key())
+            builder = builder.not_valid_before(datetime.datetime.utcnow())
+            builder = builder.not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=int(validity_days)))
+            builder = builder.serial_number(int(uuid.uuid4()))  # Unique serial number using UUID
+
+            certificate = builder.sign(private_key=key, algorithm=hashes.SHA256())
+
+            save_dir = filedialog.askdirectory()
+            if save_dir:
+                with open(f"{save_dir}/generated_certificate.crt", "wb") as f:
+                    f.write(certificate.public_bytes(serialization.Encoding.PEM))
+
+                label_crt_status.config(text="Certificate generated successfully!")
+        except Exception as e:
+            label_crt_status.config(text=f"Error generating certificate: {e}")
+    else:
+        label_crt_status.config(text="Please select both CSR and Key files and define the validity")
+
+def create_crt_generator(sub_tab_control):
+    crt_generator_tab = ttk.Frame(sub_tab_control)
+    sub_tab_control.add(crt_generator_tab, text="CRT Generator")
+
+    label_select_csr = tk.Label(crt_generator_tab, text="Select CSR File:")
+    label_select_csr.pack()
+
+    button_select_csr = tk.Button(crt_generator_tab, text="Select CSR File", command=select_csr_file)
+    button_select_csr.pack()
+
+    global entry_paste_csr
+    entry_paste_csr = tk.Text(crt_generator_tab, height=10, width=80)
+    entry_paste_csr.pack()
+
+    label_select_key = tk.Label(crt_generator_tab, text="Select Private Key File:")
+    label_select_key.pack()
+
+    button_select_key = tk.Button(crt_generator_tab, text="Select Private Key File", command=select_key_file)
+    button_select_key.pack()
+
+    global entry_paste_key
+    entry_paste_key = tk.Text(crt_generator_tab, height=10, width=80)
+    entry_paste_key.pack()
+
+    label_validity_days = tk.Label(crt_generator_tab, text="Validity (in days):")
+    label_validity_days.pack()
+    global entry_validity_days
+    entry_validity_days = tk.Entry(crt_generator_tab)
+    entry_validity_days.pack()
+
+    button_generate_crt = tk.Button(crt_generator_tab, text="Generate CRT", command=generate_crt)
+    button_generate_crt.pack()
+
+    global label_crt_status
+    label_crt_status = tk.Label(crt_generator_tab, text="")
+    label_crt_status.pack()
+
+    return crt_generator_tab
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -462,9 +550,9 @@ def main():
 
     cert_decoder_tab = create_cert_decoder(sub_tab_control)  # CERT Decoder tab
 
-    # Add the new Cert-Key Matcher tab
     cert_key_matcher_tab = create_cert_key_matcher(sub_tab_control)
 
+    crt_generator_tab = create_crt_generator(sub_tab_control)
     window.mainloop()
 
 if __name__ == "__main__":
