@@ -264,6 +264,68 @@ def create_csr_decoder(sub_tab_control):
     return csr_decoder_tab
 
 
+def decode_cert(pasted_cert=None):
+    if not pasted_cert:
+        file_path = filedialog.askopenfilename()  # Prompt user to select a certificate file
+        if not file_path:
+            label_decoded_cert.config(text="No certificate file selected")
+            return
+
+        with open(file_path, 'rb') as cert_file:
+            content = cert_file.read()
+    else:
+        content = pasted_cert.encode('utf-8')
+
+    try:
+        cert = x509.load_pem_x509_certificate(content)
+
+        cert_info = {
+            "Subject": cert.subject.rfc4514_string(),
+            "Issuer": cert.issuer.rfc4514_string(),
+            "Serial Number": cert.serial_number,
+            "Not Before": cert.not_valid_before,
+            "Not After": cert.not_valid_after
+        }
+
+        decoded_content = "Certificate Information:\n"
+        for key, value in cert_info.items():
+            decoded_content += f"{key}: {value}\n"
+
+        # Display the decoded certificate content
+        label_decoded_cert.config(text=decoded_content)
+    except Exception as e:
+        label_decoded_cert.config(text=f"Error decoding certificate: {e}")
+
+def decode_pasted_cert():
+    pasted_cert = entry_paste_cert.get("1.0", "end-1c")
+    decode_cert(pasted_cert)
+
+def create_cert_decoder(sub_tab_control):
+    cert_decoder_tab = ttk.Frame(sub_tab_control)
+    sub_tab_control.add(cert_decoder_tab, text="CERT Decoder")
+
+    label_select_cert = tk.Label(cert_decoder_tab, text="Select Certificate File:")
+    label_select_cert.pack()
+
+    button_browse = tk.Button(cert_decoder_tab, text="Browse Certificate File", command=decode_cert)
+    button_browse.pack()
+
+    label_paste_cert = tk.Label(cert_decoder_tab, text="Or Paste Certificate:")
+    label_paste_cert.pack()
+
+    global entry_paste_cert
+    entry_paste_cert = tk.Text(cert_decoder_tab, height=10, width=80)
+    entry_paste_cert.pack()
+
+    button_decode_paste = tk.Button(cert_decoder_tab, text="Decode Pasted Certificate", command=decode_pasted_cert)
+    button_decode_paste.pack()
+
+    global label_decoded_cert
+    label_decoded_cert = tk.Label(cert_decoder_tab, text="Decoded Certificate content will be displayed here")
+    label_decoded_cert.pack()
+
+    return cert_decoder_tab
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -278,10 +340,11 @@ def main():
     sub_tab_control.pack(fill="both", expand=True)
 
     create_csr_generator(sub_tab_control)
-    create_csr_check(sub_tab_control)  # Add CSR Check tab
+    create_csr_check(sub_tab_control)
+    decoder_tab = create_csr_decoder(sub_tab_control)  # CSR Decoder tab
 
-    # Newly added line to create the CSR Decoder tab
-    decoder_tab = create_csr_decoder(sub_tab_control)
+    # Change the tab name to "CERT Decoder"
+    cert_decoder_tab = create_cert_decoder(sub_tab_control)
 
     window.mainloop()
 
