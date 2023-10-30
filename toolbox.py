@@ -9,6 +9,13 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from cryptography.x509 import SubjectAlternativeName
 
+def select_file(text_widget):
+    file_path = filedialog.askopenfilename(title="Select File")
+    if file_path:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            text_widget.delete(1.0, tk.END)
+            text_widget.insert(tk.END, content)
 
 def generate_key_and_csr():
     # Retrieve input data from the GUI fields
@@ -326,6 +333,116 @@ def create_cert_decoder(sub_tab_control):
 
     return cert_decoder_tab
 
+def match_certificate_with_key():
+    cert_content = None
+    key_content = None
+
+    if entry_paste_cert.get("1.0", tk.END).strip() and entry_paste_key.get("1.0", tk.END).strip():
+        cert_content = entry_paste_cert.get("1.0", tk.END).encode('utf-8')
+        key_content = entry_paste_key.get("1.0", tk.END).encode('utf-8')
+
+    if not cert_content or not key_content:
+        cert_file_path = filedialog.askopenfilename(title="Select Certificate File")
+        key_file_path = filedialog.askopenfilename(title="Select Private Key File")
+
+        if cert_file_path and key_file_path:
+            with open(cert_file_path, 'rb') as cert_file, open(key_file_path, 'rb') as key_file:
+                cert_content = cert_file.read()
+                key_content = key_file.read()
+
+    if cert_content and key_content:
+        try:
+            cert = x509.load_pem_x509_certificate(cert_content)
+            key = serialization.load_pem_private_key(key_content, password=None)
+
+            cert_public_key = cert.public_key()
+            key_public_key = key.public_key()
+
+            if cert_public_key == key_public_key:
+                label_key_match_status.config(text="Certificate and Key Match!")
+            else:
+                label_key_match_status.config(text="Certificate and Key Do Not Match!")
+        except Exception as e:
+            label_key_match_status.config(text=f"Error: {e}")
+    else:
+        label_key_match_status.config(text="Please select both Certificate and Key files or paste them")
+
+def match_csr_with_key():
+    csr_content = None
+    key_content = None
+
+    if entry_paste_cert.get("1.0", tk.END).strip() and entry_paste_key.get("1.0", tk.END).strip():
+        csr_content = entry_paste_cert.get("1.0", tk.END).encode('utf-8')
+        key_content = entry_paste_key.get("1.0", tk.END).encode('utf-8')
+
+    if not csr_content or not key_content:
+        csr_file_path = filedialog.askopenfilename(title="Select CSR File")
+        key_file_path = filedialog.askopenfilename(title="Select Private Key File")
+
+        if csr_file_path and key_file_path:
+            with open(csr_file_path, 'rb') as csr_file, open(key_file_path, 'rb') as key_file:
+                csr_content = csr_file.read()
+                key_content = key_file.read()
+
+    if csr_content and key_content:
+        try:
+            csr = x509.load_pem_x509_csr(csr_content)
+            key = serialization.load_pem_private_key(key_content, password=None)
+
+            csr_public_key = csr.public_key()
+            key_public_key = key.public_key()
+
+            if csr_public_key == key_public_key:
+                label_key_match_status.config(text="CSR and Key Match!")
+            else:
+                label_key_match_status.config(text="CSR and Key Do Not Match!")
+        except Exception as e:
+            label_key_match_status.config(text=f"Error: {e}")
+    else:
+        label_key_match_status.config(text="Please select both CSR and Key files or paste them")
+
+def create_cert_key_matcher(sub_tab_control):
+    cert_key_matcher_tab = ttk.Frame(sub_tab_control)
+    sub_tab_control.add(cert_key_matcher_tab, text="Cert/CSR-Key Matcher")
+
+    label_select_cert_csr = tk.Label(cert_key_matcher_tab, text="Upload Certificate/CSR File:")
+    label_select_cert_csr.pack()
+
+    button_select_cert_csr = tk.Button(cert_key_matcher_tab, text="Select Certificate/CSR File", command=lambda: select_file(entry_paste_cert))
+    button_select_cert_csr.pack()
+
+    label_paste_cert_csr = tk.Label(cert_key_matcher_tab, text="Or Paste Certificate/CSR:")
+    label_paste_cert_csr.pack()
+
+    global entry_paste_cert
+    entry_paste_cert = tk.Text(cert_key_matcher_tab, height=10, width=80)
+    entry_paste_cert.pack()
+
+    label_select_key = tk.Label(cert_key_matcher_tab, text="Upload Private Key File:")
+    label_select_key.pack()
+
+    button_select_key = tk.Button(cert_key_matcher_tab, text="Select Private Key File", command=lambda: select_file(entry_paste_key))
+    button_select_key.pack()
+
+    label_paste_key = tk.Label(cert_key_matcher_tab, text="Or Paste Private Key:")
+    label_paste_key.pack()
+
+    global entry_paste_key
+    entry_paste_key = tk.Text(cert_key_matcher_tab, height=10, width=80)
+    entry_paste_key.pack()
+
+    button_match_cert_key = tk.Button(cert_key_matcher_tab, text="Match Certificate with Key", command=match_certificate_with_key)
+    button_match_cert_key.pack()
+
+    button_match_csr_key = tk.Button(cert_key_matcher_tab, text="Match CSR with Key", command=match_csr_with_key)
+    button_match_csr_key.pack()
+
+    global label_key_match_status
+    label_key_match_status = tk.Label(cert_key_matcher_tab, text="")
+    label_key_match_status.pack()
+
+    return cert_key_matcher_tab
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -343,8 +460,10 @@ def main():
     create_csr_check(sub_tab_control)
     decoder_tab = create_csr_decoder(sub_tab_control)  # CSR Decoder tab
 
-    # Change the tab name to "CERT Decoder"
-    cert_decoder_tab = create_cert_decoder(sub_tab_control)
+    cert_decoder_tab = create_cert_decoder(sub_tab_control)  # CERT Decoder tab
+
+    # Add the new Cert-Key Matcher tab
+    cert_key_matcher_tab = create_cert_key_matcher(sub_tab_control)
 
     window.mainloop()
 
