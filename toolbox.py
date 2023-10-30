@@ -189,46 +189,53 @@ def create_csr_generator(sub_tab_control):
     command_text = tk.Text(csr_tab, height=10, width=80)
     command_text.pack()
 
-def decode_csr():
-    file_path = filedialog.askopenfilename()  # Prompt user to select a CSR file
-    if file_path:
+def decode_csr(pasted_csr=None):
+    if not pasted_csr:
+        file_path = filedialog.askopenfilename()  # Prompt user to select a CSR file
+        if not file_path:
+            label_decoded_csr.config(text="No CSR file selected")
+            return
+
         with open(file_path, 'rb') as csr_file:
             content = csr_file.read()
-
-            try:
-                csr = x509.load_pem_x509_csr(content)
-
-                subject_info = {
-                    "Common Name": csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value,
-                    "Country": csr.subject.get_attributes_for_oid(NameOID.COUNTRY_NAME)[0].value,
-                    "State": csr.subject.get_attributes_for_oid(NameOID.STATE_OR_PROVINCE_NAME)[0].value,
-                    "Locality": csr.subject.get_attributes_for_oid(NameOID.LOCALITY_NAME)[0].value,
-                    "Organization": csr.subject.get_attributes_for_oid(NameOID.ORGANIZATION_NAME)[0].value,
-                    "Organizational Unit": csr.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)[0].value,
-                    "Email": csr.subject.get_attributes_for_oid(NameOID.EMAIL_ADDRESS)[0].value,
-                }
-
-                san = []
-                for ext in csr.extensions:
-                    if isinstance(ext.value, x509.SubjectAlternativeName):
-                        san.extend(str(name).split("'")[1] for name in ext.value if isinstance(name, x509.DNSName))
-
-                decoded_content = "Subject Information:\n"
-                for key, value in subject_info.items():
-                    decoded_content += f"{key}: {value}\n"
-
-                if san:
-                    decoded_content += "\nSubject Alternative Name:\n"
-                    for value in san:
-                        decoded_content += f"{value}\n"
-
-                # Display the decoded CSR content
-                label_decoded_csr.config(text=decoded_content)
-            except Exception as e:
-                label_decoded_csr.config(text=f"Error decoding CSR: {e}")
     else:
-        label_decoded_csr.config(text="No CSR file selected")
+        content = pasted_csr.encode('utf-8')
 
+    try:
+        csr = x509.load_pem_x509_csr(content)
+
+        subject_info = {
+            "Common Name": csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value,
+            "Country": csr.subject.get_attributes_for_oid(NameOID.COUNTRY_NAME)[0].value,
+            "State": csr.subject.get_attributes_for_oid(NameOID.STATE_OR_PROVINCE_NAME)[0].value,
+            "Locality": csr.subject.get_attributes_for_oid(NameOID.LOCALITY_NAME)[0].value,
+            "Organization": csr.subject.get_attributes_for_oid(NameOID.ORGANIZATION_NAME)[0].value,
+            "Organizational Unit": csr.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)[0].value,
+            "Email": csr.subject.get_attributes_for_oid(NameOID.EMAIL_ADDRESS)[0].value,
+        }
+
+        san = []
+        for ext in csr.extensions:
+            if isinstance(ext.value, x509.SubjectAlternativeName):
+                san.extend(str(name).split("'")[1] for name in ext.value if isinstance(name, x509.DNSName))
+
+        decoded_content = "Subject Information:\n"
+        for key, value in subject_info.items():
+            decoded_content += f"{key}: {value}\n"
+
+        if san:
+            decoded_content += "\nSubject Alternative Name:\n"
+            for value in san:
+                decoded_content += f"{value}\n"
+
+        # Display the decoded CSR content
+        label_decoded_csr.config(text=decoded_content)
+    except Exception as e:
+        label_decoded_csr.config(text=f"Error decoding CSR: {e}")
+
+def decode_pasted_csr():
+    pasted_csr = entry_paste_csr.get("1.0", "end-1c")
+    decode_csr(pasted_csr)
 
 def create_csr_decoder(sub_tab_control):
     csr_decoder_tab = ttk.Frame(sub_tab_control)
@@ -237,14 +244,25 @@ def create_csr_decoder(sub_tab_control):
     label_select_csr = tk.Label(csr_decoder_tab, text="Select CSR File:")
     label_select_csr.pack()
 
-    button_browse_csr = tk.Button(csr_decoder_tab, text="Browse CSR File", command=decode_csr)
-    button_browse_csr.pack()
+    button_browse = tk.Button(csr_decoder_tab, text="Browse CSR File", command=decode_csr)
+    button_browse.pack()
+
+    label_paste_csr = tk.Label(csr_decoder_tab, text="Or Paste CSR:")
+    label_paste_csr.pack()
+
+    global entry_paste_csr
+    entry_paste_csr = tk.Text(csr_decoder_tab, height=10, width=80)
+    entry_paste_csr.pack()
+
+    button_decode_paste = tk.Button(csr_decoder_tab, text="Decode Pasted CSR", command=decode_pasted_csr)
+    button_decode_paste.pack()
 
     global label_decoded_csr
     label_decoded_csr = tk.Label(csr_decoder_tab, text="Decoded CSR content will be displayed here")
     label_decoded_csr.pack()
 
     return csr_decoder_tab
+
 
 def main():
     window = tk.Tk()
