@@ -4,10 +4,12 @@ import datetime
 import uuid
 from tkinter import filedialog
 from tkinter import ttk
+from tkinter import simpledialog
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography import x509
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.x509 import SubjectAlternativeName
 from cryptography.x509 import load_pem_x509_certificate
@@ -587,6 +589,61 @@ def create_cert_converter(sub_tab_control):
 
     return cert_converter_tab
 
+def convert_pfx_to_pem(pfx_file, password):
+    try:
+        with open(pfx_file, 'rb') as file:
+            pfx_content = file.read()
+
+            # Load PFX file using provided password
+            pfx = serialization.load_pem_private_key(
+                pfx_content,
+                password=password.encode('utf-8'),
+                backend=default_backend()
+            )
+
+            # Separate the private key and the certificate
+            private_key = pfx.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+            cert = pfx.public_bytes(serialization.Encoding.PEM)
+
+            # Save the separate private key and certificate
+            with open("private_key.pem", "wb") as key_file:
+                key_file.write(private_key)
+
+            with open("certificate.pem", "wb") as cert_file:
+                cert_file.write(cert)
+
+            label_pfx_convert_status.config(text="PFX file converted successfully!")
+    except Exception as e:
+        label_pfx_convert_status.config(text=f"Error converting PFX file: {e}")
+
+def select_pfx_file():
+    file_path = filedialog.askopenfilename(title="Select PFX File")
+    if file_path:
+        password = simpledialog.askstring("Password", "Enter password for PFX file", show='*')
+        if password:
+            convert_pfx_to_pem(file_path, password)
+
+def create_pfx_converter(sub_tab_control):
+    pfx_converter_tab = ttk.Frame(sub_tab_control)
+    sub_tab_control.add(pfx_converter_tab, text="PFX Converter")
+
+    label_select_pfx = tk.Label(pfx_converter_tab, text="Select PFX File:")
+    label_select_pfx.pack()
+
+    button_select_pfx = tk.Button(pfx_converter_tab, text="Select PFX File", command=select_pfx_file)
+    button_select_pfx.pack()
+
+    global label_pfx_convert_status
+    label_pfx_convert_status = tk.Label(pfx_converter_tab, text="")
+    label_pfx_convert_status.pack()
+
+    return pfx_converter_tab
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -612,6 +669,9 @@ def main():
 
     # New Cert Converter Tab
     cert_converter_tab = create_cert_converter(sub_tab_control)
+
+    # New PFX Converter Tab
+    pfx_converter_tab = create_pfx_converter(sub_tab_control)
 
     window.mainloop()
 
