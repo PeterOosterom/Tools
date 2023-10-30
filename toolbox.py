@@ -644,6 +644,129 @@ def create_pfx_converter(sub_tab_control):
 
     return pfx_converter_tab
 
+def save_settings():
+    selected_header = header_var.get()
+    selected_font_size = font_size_var.get()
+    with open("settings.txt", "w") as settings_file:
+        settings_file.write(f"Header: {selected_header}\nFont Size: {selected_font_size}")
+    label_settings_status.config(text="Settings saved successfully!")
+
+def load_settings():
+    try:
+        with open("settings.txt", "r") as settings_file:
+            settings = settings_file.read()
+            settings_info = settings.split('\n')
+            header = settings_info[0].split(': ')[1]
+            font_size = int(settings_info[1].split(': ')[1])
+            header_var.set(header)
+            font_size_var.set(font_size)
+            label_settings_status.config(text="Settings loaded successfully!")
+    except FileNotFoundError:
+        label_settings_status.config(text="No saved settings found.")
+
+def create_settings_tab(tab_control):
+    settings_tab = ttk.Frame(tab_control)
+    tab_control.add(settings_tab, text="Settings")
+
+    label_header = tk.Label(settings_tab, text="Select Header:")
+    label_header.pack()
+
+    global header_var
+    header_var = tk.StringVar()
+    header_var.set("Settings")
+    header_dropdown = tk.OptionMenu(settings_tab, header_var, "Settings", "SSL Toolbox", "Custom Header")
+    header_dropdown.pack()
+
+    label_font_size = tk.Label(settings_tab, text="Set Font Size:")
+    label_font_size.pack()
+
+    global font_size_var
+    font_size_var = tk.IntVar(value=12)
+    font_size_scale = tk.Scale(settings_tab, variable=font_size_var, from_=8, to=20, orient=tk.HORIZONTAL)
+    font_size_scale.pack()
+
+    button_save_settings = tk.Button(settings_tab, text="Save Settings", command=save_settings)
+    button_save_settings.pack()
+
+    button_load_settings = tk.Button(settings_tab, text="Load Settings", command=load_settings)
+    button_load_settings.pack()
+
+    global label_settings_status
+    label_settings_status = tk.Label(settings_tab, text="")
+    label_settings_status.pack()
+
+    load_settings()  # Load settings on tab load
+
+    return settings_tab
+
+def create_powershell_tab(tab_control):
+    powershell_tab = ttk.Frame(tab_control)
+    tab_control.add(powershell_tab, text="Powershell")
+
+    sub_powershell_control = ttk.Notebook(powershell_tab)
+    sub_powershell_control.pack(fill="both", expand=True)
+
+    mail_tab = ttk.Frame(sub_powershell_control)
+    sub_powershell_control.add(mail_tab, text="Mail")
+
+    sub_mail_control = ttk.Notebook(mail_tab)
+    sub_mail_control.pack(fill="both", expand=True)
+
+    language_tab = ttk.Frame(sub_mail_control)
+    sub_mail_control.add(language_tab, text="Language")
+
+    label_mailbox = tk.Label(language_tab, text="Mailbox:")
+    label_mailbox.pack()
+    entry_mailbox = tk.Entry(language_tab)
+    entry_mailbox.pack()
+
+    label_language = tk.Label(language_tab, text="Language:")
+    label_language.pack()
+
+    # Dropdown box for language selection
+    languages = ["English", "Spanish", "French", "German", "Dutch", "Portuguese (Brazil)"]
+    selected_language = tk.StringVar(language_tab)
+    selected_language.set(languages[0])  # Default language selection
+
+    language_dropdown = tk.OptionMenu(language_tab, selected_language, *languages)
+    language_dropdown.pack()
+
+    def generate_powershell_command():
+        mailbox = entry_mailbox.get()
+        language = selected_language.get()
+
+
+        if mailbox and language:
+            # Adjusting the PowerShell command
+            language_codes = {
+                "English": "en-us",
+                "Spanish": "es-es",
+                "French": "fr-fr",
+                "German": "de-de",
+                "Dutch": "nl-nl",
+                "Portuguese (Brazil)": "pt-br"
+            }
+
+            language_code = language_codes.get(language, "en-us")
+
+            powershell_command = f'Connect-ExchangeOnline\nSet-MailboxRegionalConfiguration -Identity "{mailbox}" -Language {language_code} -LocalizeDefaultFolderName'
+            text_powershell_command.delete(1.0, tk.END)
+            text_powershell_command.insert(tk.END, powershell_command)
+        else:
+            text_powershell_command.delete(1.0, tk.END)
+            text_powershell_command.insert(tk.END, "Please enter both Mailbox and Language")
+
+    # Creating the "Generate PowerShell Command" button
+    button_generate_powershell = tk.Button(powershell_tab, text="Generate PowerShell Command", command=generate_powershell_command)
+    button_generate_powershell.pack()
+
+    # Creating a Text widget to display the PowerShell command output
+    text_powershell_command = tk.Text(powershell_tab, height=10, width=80)
+    text_powershell_command.pack()
+
+    return powershell_tab
+
+
 def main():
     window = tk.Tk()
     window.title("Toolbox")
@@ -660,18 +783,13 @@ def main():
     create_csr_generator(sub_tab_control)
     create_csr_check(sub_tab_control)
     decoder_tab = create_csr_decoder(sub_tab_control)  # CSR Decoder tab
-
     cert_decoder_tab = create_cert_decoder(sub_tab_control)  # CERT Decoder tab
-
     cert_key_matcher_tab = create_cert_key_matcher(sub_tab_control)
-
     crt_generator_tab = create_crt_generator(sub_tab_control)
-
-    # New Cert Converter Tab
     cert_converter_tab = create_cert_converter(sub_tab_control)
-
-    # New PFX Converter Tab
     pfx_converter_tab = create_pfx_converter(sub_tab_control)
+    powershell_tab = create_powershell_tab(tab_control)
+    tab_control.add(create_settings_tab(tab_control), text="Settings")  # Adding Settings Tab
 
     window.mainloop()
 
