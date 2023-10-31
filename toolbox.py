@@ -2,6 +2,7 @@
 import tkinter as tk
 import datetime
 import uuid
+import traceback
 from tkinter import filedialog
 from tkinter import ttk
 from tkinter import simpledialog
@@ -594,32 +595,32 @@ def convert_pfx_to_pem(pfx_file, password):
         with open(pfx_file, 'rb') as file:
             pfx_content = file.read()
 
-            # Load PFX file using provided password
-            pfx = serialization.load_pem_private_key(
-                pfx_content,
-                password=password.encode('utf-8'),
-                backend=default_backend()
-            )
+            try:
+                pfx = serialization.load_pem_private_key(
+                    pfx_content,
+                    password=password.encode('utf-8'),
+                    backend=default_backend()
+                )
 
-            # Separate the private key and the certificate
-            private_key = pfx.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()
-            )
+                private_key = pfx.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
 
-            cert = pfx.public_bytes(serialization.Encoding.PEM)
+                cert = pfx.public_bytes(serialization.Encoding.PEM)
 
-            # Save the separate private key and certificate
-            with open("private_key.pem", "wb") as key_file:
-                key_file.write(private_key)
+                with open("private_key.pem", "wb") as key_file:
+                    key_file.write(private_key)
 
-            with open("certificate.pem", "wb") as cert_file:
-                cert_file.write(cert)
+                with open("certificate.pem", "wb") as cert_file:
+                    cert_file.write(cert)
 
-            label_pfx_convert_status.config(text="PFX file converted successfully!")
+                label_pfx_convert_status.config(text="PFX file converted successfully!")
+            except Exception as e:
+                label_pfx_convert_status.config(text=f"Error loading PFX: {e}")
     except Exception as e:
-        label_pfx_convert_status.config(text=f"Error converting PFX file: {e}")
+        label_pfx_convert_status.config(text=f"Error reading PFX file: {e}")
 
 def select_pfx_file():
     file_path = filedialog.askopenfilename(title="Select PFX File")
