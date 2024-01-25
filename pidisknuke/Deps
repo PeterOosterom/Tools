@@ -4,4 +4,4 @@ sudo apt-get install pv
 sudo apt-get install pip
 sudo apt install python3-tqdm
 apt install python3-flask
-apt install python3-progressbar2
+
