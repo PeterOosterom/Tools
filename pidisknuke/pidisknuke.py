@@ -3,9 +3,9 @@
 import subprocess
 import os
 import time
+import threading
 import signal
-from multiprocessing import Process
-import sys
+import asyncio
 
 LOG_FOLDER = "/var/log/pidisknuke"
 
@@ -45,12 +45,30 @@ def wipe_disk(device, log_path):
             time.sleep(1)
     except KeyboardInterrupt:
         print("Ctrl+C pressed. Exiting gracefully.")
-        sys.exit(0)
+        os._exit(0)  # Force exit to ensure cleanup
     except subprocess.CalledProcessError as e:
         print(f"Error: {e.output.decode().strip()}")
         print(f"Disk {device} might be disconnected or not a mountable filesystem.")
     except Exception as ex:
         print(f"Error looking up object for device {device}: {ex}")
+
+async def monitor_disks():
+    while True:
+        usb_devices = find_usb_devices()
+        for device in usb_devices:
+            disk_path = f"/dev/{device}"
+            log_path = os.path.join(LOG_FOLDER, "pidisknuke_log.txt")
+
+            if disk_path not in ACTIVE_DISKS:
+                ACTIVE_DISKS[disk_path] = threading.Thread(target=wipe_disk, args=(disk_path, log_path))
+                ACTIVE_DISKS[disk_path].start()
+
+        # Remove inactive threads
+        for device, thread in list(ACTIVE_DISKS.items()):
+            if not thread.is_alive():
+                del ACTIVE_DISKS[device]
+
+        await asyncio.sleep(1)
 
 def find_usb_devices():
     result = subprocess.run(["lsblk", "--output", "KNAME,TRAN", "--noheadings", "--list"], capture_output=True, text=True)
@@ -58,24 +76,7 @@ def find_usb_devices():
     usb_devices = [line.split()[0] for line in lines if "usb" in line.lower()]
     return usb_devices
 
-def process_usb_devices(devices):
-    processes = []
-    for device in devices:
-        disk_path = f"/dev/{device}"
-        log_path = os.path.join(LOG_FOLDER, "pidisknuke_log.txt")
-        
-        print(f"Disk detected: {disk_path}")
-        process = Process(target=wipe_disk, args=(disk_path, log_path))
-        process.start()
-        processes.append(process)
-
-    # Wait for all processes to finish
-    try:
-        for process in processes:
-            process.join()
-    except KeyboardInterrupt:
-        print("Ctrl+C pressed. Exiting gracefully.")
-        sys.exit(0)
+ACTIVE_DISKS = {}
 
 def main():
     print("Disk Wiping Script - Welcome!")
@@ -86,22 +87,10 @@ def main():
     os.makedirs(LOG_FOLDER, exist_ok=True)
 
     # Set up the signal handler for Ctrl+C
-    signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(0))
-    
-    # Monitor for disk insertion
-    while True:
-        try:
-            usb_devices = find_usb_devices()
-            
-            if usb_devices:
-                process_usb_devices(usb_devices)
+    signal.signal(signal.SIGINT, lambda signum, frame: os._exit(0))  # Force exit to ensure cleanup
 
-            # Wait for the disk to be inserted
-            time.sleep(1)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            print("Restarting the script...")
-            time.sleep(1)
+    # Start the disk monitoring coroutine
+    asyncio.run(monitor_disks())
 
 if __name__ == "__main__":
     main()
