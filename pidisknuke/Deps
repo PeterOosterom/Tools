@@ -2,5 +2,4 @@ sudo apt-get install hdparm
 sudo apt-get install nvme-cli
 sudo apt-get install pv
 sudo apt-get install pip
-sudo rm -rf /usr/lib/python3.11/EXTERNALLY-MANAGED
-pip install tqdm 
+sudo apt install python3-tqdm
