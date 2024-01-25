@@ -3,7 +3,9 @@
 import subprocess
 import os
 import time
+import signal
 from multiprocessing import Process
+import sys  # Add this line to import sys
 
 LOG_FOLDER = "/var/log/pidisknuke"
 
@@ -16,30 +18,33 @@ def fill_with_zeros_hdd(device):
     subprocess.run(["dd", "if=/dev/zero", "of=" + device, "bs=1M", "status=progress"])
 
 def wipe_disk(device, log_path):
-    # Check if the device is an SSD or HDD
-    result = subprocess.run(["lsblk", "--output", "TRAN", "--noheadings", "--raw", device], capture_output=True, text=True)
-    disk_type = result.stdout.strip()
+    try:
+        # Check if the device is an SSD or HDD
+        result = subprocess.run(["lsblk", "--output", "TRAN", "--noheadings", "--raw", device], capture_output=True, text=True)
+        disk_type = result.stdout.strip()
 
-    if disk_type == "usb":
-        if "nvme" in device:
-            print(f"Disk type: SSD")
-            secure_erase_ssd(device)
+        if disk_type == "usb":
+            if "nvme" in device:
+                print(f"Disk type: SSD")
+                secure_erase_ssd(device)
+            else:
+                print(f"Disk type: HDD")
+                fill_with_zeros_hdd(device)
         else:
-            print(f"Disk type: HDD")
-            fill_with_zeros_hdd(device)
-    else:
-        print(f"Unsupported disk type: {disk_type}")
+            print(f"Unsupported disk type: {disk_type}")
 
-    # Output to a log file
-    with open(log_path, "a") as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: Wipe process completed for {device}\n")
+        # Output to a log file
+        with open(log_path, "a") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: Wipe process completed for {device}\n")
 
-    # Unmount the disk
-    subprocess.run(["udisksctl", "unmount", "-b", device])
+        # Unmount the disk
+        subprocess.run(["udisksctl", "unmount", "-b", device])
 
-    # Wait for the disk to be removed
-    while os.path.exists(device):
-        time.sleep(1)
+        # Wait for the disk to be removed
+        while os.path.exists(device):
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Ctrl+C pressed. Exiting gracefully.")
 
 def find_usb_devices():
     result = subprocess.run(["lsblk", "--output", "KNAME,TRAN", "--noheadings", "--list"], capture_output=True, text=True)
@@ -59,8 +64,11 @@ def process_usb_devices(devices):
         processes.append(process)
 
     # Wait for all processes to finish
-    for process in processes:
-        process.join()
+    try:
+        for process in processes:
+            process.join()
+    except KeyboardInterrupt:
+        print("Ctrl+C pressed. Exiting gracefully.")
 
 def main():
     print("Disk Wiping Script - Welcome!")
@@ -69,6 +77,9 @@ def main():
 
     # Create the log folder if it doesn't exist
     os.makedirs(LOG_FOLDER, exist_ok=True)
+
+    # Set up the signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(0))
     
     # Monitor for disk insertion
     while True:
