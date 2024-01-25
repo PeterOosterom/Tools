@@ -3,5 +3,6 @@ sudo apt-get install nvme-cli
 sudo apt-get install pv
 sudo apt-get install pip
 sudo apt install python3-tqdm
-apt install python3-flask
+sudo apt install python3-flask
+sudo apt install screen
 
