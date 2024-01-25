@@ -16,11 +16,12 @@ def wipe_disk(device):
     disk_type = result.stdout.strip()
 
     if disk_type == "usb":
-        print(f"Disk type: HDD")
-        fill_with_zeros_hdd(device)
-    elif disk_type == "nvme":
-        print(f"Disk type: SSD")
-        secure_erase_ssd(device)
+        if "nvme" in device:
+            print(f"Disk type: SSD")
+            secure_erase_ssd(device)
+        else:
+            print(f"Disk type: HDD")
+            fill_with_zeros_hdd(device)
     else:
         print(f"Unsupported disk type: {disk_type}")
 
