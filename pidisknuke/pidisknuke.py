@@ -45,6 +45,7 @@ def wipe_disk(device, log_path):
             time.sleep(1)
     except KeyboardInterrupt:
         print("Ctrl+C pressed. Exiting gracefully.")
+        sys.exit(0)
     except subprocess.CalledProcessError as e:
         print(f"Error: {e.output.decode().strip()}")
         print(f"Disk {device} might be disconnected or not a mountable filesystem.")
@@ -74,6 +75,7 @@ def process_usb_devices(devices):
             process.join()
     except KeyboardInterrupt:
         print("Ctrl+C pressed. Exiting gracefully.")
+        sys.exit(0)
 
 def main():
     print("Disk Wiping Script - Welcome!")
@@ -88,13 +90,18 @@ def main():
     
     # Monitor for disk insertion
     while True:
-        usb_devices = find_usb_devices()
-        
-        if usb_devices:
-            process_usb_devices(usb_devices)
+        try:
+            usb_devices = find_usb_devices()
+            
+            if usb_devices:
+                process_usb_devices(usb_devices)
 
-        # Wait for the disk to be inserted
-        time.sleep(1)
+            # Wait for the disk to be inserted
+            time.sleep(1)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            print("Restarting the script...")
+            time.sleep(1)
 
 if __name__ == "__main__":
     main()
