@@ -5,7 +5,7 @@ import os
 import time
 import signal
 from multiprocessing import Process
-import sys  # Add this line to import sys
+import sys
 
 LOG_FOLDER = "/var/log/pidisknuke"
 
@@ -45,6 +45,11 @@ def wipe_disk(device, log_path):
             time.sleep(1)
     except KeyboardInterrupt:
         print("Ctrl+C pressed. Exiting gracefully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e.output.decode().strip()}")
+        print(f"Disk {device} might be disconnected or not a mountable filesystem.")
+    except Exception as ex:
+        print(f"Error looking up object for device {device}: {ex}")
 
 def find_usb_devices():
     result = subprocess.run(["lsblk", "--output", "KNAME,TRAN", "--noheadings", "--list"], capture_output=True, text=True)
