@@ -13,7 +13,7 @@ def secure_erase_ssd(device):
 
 def fill_with_zeros_hdd(device):
     print(f"Filling HDD with zeros: {device}")
-    subprocess.run(["pv", "--size", "$(blockdev --getsize64 " + device + ")", "-n", "if=/dev/zero", "|", "dd", "of=" + device, "bs=1M", "status=progress"], shell=True)
+    subprocess.run(["dd", "if=/dev/zero", "of=" + device, "bs=1M", "status=progress"])
 
 def wipe_disk(device, log_path):
     # Check if the device is an SSD or HDD
