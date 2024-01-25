@@ -1,2 +1,3 @@
 sudo apt-get install hdparm
 sudo apt-get install nvme-cli
+sudo apt-get install pv
