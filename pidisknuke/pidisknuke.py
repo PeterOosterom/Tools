@@ -6,8 +6,11 @@ import time
 import threading
 import signal
 import asyncio
+from flask import Flask, render_template
 
 LOG_FOLDER = "/var/log/pidisknuke"
+
+app = Flask(__name__)
 
 def secure_erase_ssd(device):
     print(f"Secure erasing SSD: {device}")
@@ -78,19 +81,13 @@ def find_usb_devices():
 
 ACTIVE_DISKS = {}
 
-def main():
-    print("Disk Wiping Script - Welcome!")
-    print("This script securely wipes SSDs and fills HDDs with zeros.")
-    print("Press Ctrl+C to exit.")
+@app.route('/')
+def index():
+    return render_template('index.html', active_disks=ACTIVE_DISKS.keys())
 
-    # Create the log folder if it doesn't exist
-    os.makedirs(LOG_FOLDER, exist_ok=True)
-
-    # Set up the signal handler for Ctrl+C
-    signal.signal(signal.SIGINT, lambda signum, frame: os._exit(0))  # Force exit to ensure cleanup
+if __name__ == "__main__":
+    # Start the Flask app in a separate thread
+    threading.Thread(target=app.run, args=('0.0.0.0', 5000)).start()
 
     # Start the disk monitoring coroutine
     asyncio.run(monitor_disks())
-
-if __name__ == "__main__":
-    main()
