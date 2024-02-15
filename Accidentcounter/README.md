@@ -7,7 +7,7 @@ Days since last accident counter
 
 ## Installation
 
-Its just a single html5 file, just use your favorite webserver
+Its just a single html5 file, just use your favorite webserver to serve the index.html
 
 
     
