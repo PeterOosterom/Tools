@@ -1,14 +1,20 @@
-#Days since last accident counter
+# Accident Counter
+
+Days since last accident counter
 
 
-Its a simple days since last accident counter with a reset button.
 
-It counts up every morning at 8 am.
 
-#How to change timezone
+## Installation
+
+Its just a single html5 file, just use your favorite webserver
+
+
+    
+## Changing the time
 
 Line 67 to 78 contain the logic for the time counter.
 
-Change the timezone on line 70 by changing timeZone: 'Europe/Amsterdam' 
+Change the timezone on line 70 by changing timeZone: 'Europe/Amsterdam'
 
-or change the time it counts up on line 73
+or change the time it counts up on line 73 by changing the .getHours, .getMinutes or .getSeconds values
