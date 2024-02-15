@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Days Since Last Accident</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    #counter {
+      font-size: 3em;
+      color: red;
+    }
+    #reset-btn {
+      font-size: 1.5em;
+      background-color: red;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Days Since Last Accident</h1>
+  <div id="counter">0</div>
+  <button id="reset-btn">Reset Counter</button>
+
+  <script>
+    // Get the counter element
+    const counterElement = document.getElementById('counter');
+
+    // Function to update the counter
+    function updateCounter() {
+      // Get the current date and the last reset date from local storage
+      const currentDate = new Date();
+      const lastResetDate = localStorage.getItem('lastReset');
+
+      // If lastResetDate exists, calculate the difference in milliseconds
+      if (lastResetDate) {
+        const difference = currentDate - new Date(lastResetDate);
+
+        // Convert milliseconds to days and update the counter
+        const daysSinceReset = Math.floor(difference / (1000 * 60 * 60 * 24));
+        counterElement.textContent = daysSinceReset;
+      } else {
+        // If lastResetDate doesn't exist, set counter to 0
+        counterElement.textContent = '0';
+      }
+    }
+
+    // Update the counter when the page loads
+    updateCounter();
+
+    // Function to reset the counter
+    function resetCounter() {
+      // Update the last reset date in local storage
+      localStorage.setItem('lastReset', new Date().toISOString());
+      // Update the counter
+      updateCounter();
+    }
+
+    // Function to check if it's time to increase the counter
+    function checkAndUpdateCounter() {
+      const currentDate = new Date();
+      const amsterdamTime = new Date(currentDate.toLocaleString('en-US', {timeZone: 'Europe/Amsterdam'}));
+      
+      // Check if it's 8 am in Amsterdam time
+      if (amsterdamTime.getHours() === 8 && amsterdamTime.getMinutes() === 0 && amsterdamTime.getSeconds() === 0) {
+        // Increase the counter
+        localStorage.setItem('lastReset', new Date().toISOString());
+        updateCounter();
+      }
+    }
+
+    // Check and update the counter every second
+    setInterval(checkAndUpdateCounter, 1000);
+
+    // Add event listener to the reset button
+    document.getElementById('reset-btn').addEventListener('click', resetCounter);
+  </script>
+</body>
+</html>
